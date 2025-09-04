@@ -1,29 +1,32 @@
 `timescale 1ns/1ns
 
 module test;
+
+    logic [31:0] probe;
  
-    wire rx, tx, interrupt;
+    // logic rx, tx;
+    logic interrupt;
 
-    reg PCLK, PRESETn; // System bus equivalent Reset
-    reg [31:0] PADDR, PWDATA;
-    reg PSELx, PENABLE, PWRITE;
-    reg [3:0] PSTRB;
+    logic PCLK, PRESETn; // System bus equivalent Reset
+    logic [31:0] PADDR, PWDATA;
+    logic PSELx, PENABLE, PWRITE;
+    logic [3:0] PSTRB;
 
-    wire [31:0] PRDATA;
-    wire PREADY, PSLVERR;
+    logic [31:0] PRDATA;
+    logic PREADY, PSLVERR;
 
-    wire [7:0] TX_DATA;
-    reg  [7:0] RX_DATA;
-    wire [1:0] PARITY_MODE, STOP_BITS;
-    wire [31:0] BAUD;
-    wire PARITY_ERROR, FRAME_ERROR, BREAK_ERROR;
+    logic [7:0] TX_DATA;
+    logic [7:0] RX_DATA;
+    logic [1:0] PARITY_MODE, STOP_BITS;
+    logic [31:0] BAUD;
+    logic PARITY_ERROR, FRAME_ERROR, BREAK_ERROR;
 
 
-    reg       rx_done_tick;    // data word received
-    reg       tx_done_tick;    // data transmission complete
-    reg       tx_fifo_full, tx_fifo_empty;
-    reg       rx_fifo_full, rx_fifo_empty;
-    reg       rx_fifo_read_en, tx_fifo_write_en;
+    logic       rx_done_tick;    // data word received
+    logic       tx_done_tick;    // data transmission complete
+    logic       tx_fifo_full, tx_fifo_empty;
+    logic       rx_fifo_full, rx_fifo_empty;
+    logic       rx_fifo_read_en, tx_fifo_write_en;
 
     localparam [31:0] tx_data_address        ='h0 ; // write     
     localparam [31:0] rx_data_address        ='h4 ; // read      
@@ -73,7 +76,9 @@ module test;
 
         // read & write to fifo
         .tx_fifo_write_en(tx_fifo_write_en),
-        .rx_fifo_read_en(rx_fifo_read_en)
+        .rx_fifo_read_en(rx_fifo_read_en),
+
+        .probe(probe)
     );
     //uart_top dut_c(
     //      rx,
@@ -106,38 +111,51 @@ module test;
     initial
     begin
                                    PRESETn <= 0; PSELx <= 0; PENABLE = 0;
-              @(posedge PCLK)      PRESETn = 1;                                     //no write address available but request for write operation
+              @(posedge PCLK)      PRESETn = 1;
+                                   RX_DATA = 8'ha; rx_fifo_empty = 0;
+                                   tx_done_tick = 1; tx_fifo_full = 0;
     repeat(2) @(posedge PCLK);
-              @(negedge PCLK)      Write_data(baud_address, 'd1);        // write operation
 
+              @(posedge PCLK)      Write_data(baud_address, 'd1, 4'b0001);
     repeat(2) @(posedge PCLK);
-    //           @(posedge PCLK)     PRESETn<=0; transfer<=0; 
-    //           @(posedge PCLK)     PRESETn = 1;
-    // repeat(3) @(posedge PCLK)     transfer = 1;                             // no read address available but request for read operation
-    // repeat(2) @(posedge PCLK)     Read_slave1;                             //read operation
-    //
-    // repeat(3) @(posedge PCLK);   Read_slave2;
-    // repeat(3) @(posedge PCLK);   apb_read_paddr = 9'd45;                 //data not inserted in write operation but requested for read operation
-    // repeat(4) @(posedge PCLK);
+
+              @(posedge PCLK)      Read_data(baud_address);
+    repeat(2) @(posedge PCLK);
+
+              @(posedge PCLK)      PRESETn = 0;
+              @(posedge PCLK)      PRESETn = 1;
+    repeat(2) @(posedge PCLK);
+
+              @(posedge PCLK)      Write_data(tx_data_address, 32'hdeadbeef, 4'b1111);
+    repeat(2) @(posedge PCLK);
+
+              @(posedge PCLK)      Write_data(tx_data_address, 32'h1111dcba, 4'b1111);
+    repeat(2) @(posedge PCLK);
+
+              @(posedge PCLK)      Read_data(status_address);
+    repeat(4) @(posedge PCLK);
+
     $finish;
     end
 
     task Write_data;
       input [31:0] addr, data;
+      input [3:0]  strb;
     begin
         @(posedge PCLK);
             PSELx = 1;
             PWRITE = 1;
             PADDR = addr;
             PWDATA = data;
-            PSTRB = 4'b1111;
+            PSTRB = strb;
 
         @(posedge PCLK);
             PENABLE = 1;
 
-        repeat(2)@(posedge PCLK);
-            PSELx = 0;
+        @(posedge PCLK);
             PENABLE = 0;
+        // @(negedge PCLK);
+            PSELx = 0;
     end
     endtask
 
@@ -146,16 +164,17 @@ module test;
     begin 
         @(posedge PCLK);
             PSELx = 1;
-            PWRITE = 1;
+            PWRITE = 0;
             PADDR = addr;
             PSTRB = 4'b0000;
 
         @(posedge PCLK);
             PENABLE = 1;
 
-        repeat(2)@(posedge PCLK);
-            PSELx = 0;
+        @(posedge PCLK);
             PENABLE = 0;
+        // @(negedge PCLK);
+            PSELx = 0;
     end
     endtask
 

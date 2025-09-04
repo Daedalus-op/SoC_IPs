@@ -19,7 +19,7 @@ module uart_master #(
     input                 [ 3:0] PSTRB, // Write strobes
 
     output                       PREADY, // Slave interface Ready
-    output reg [BUS_WIDTH - 1:0] PRDATA, // Slave interface Read Data // TODO: generating an rtl_rom
+    output reg [BUS_WIDTH - 1:0] PRDATA, // Slave interface Read Data // NOTE: generating an rtl_rom
     output reg                   PSLVERR,
 
     `ifdef DMA_SUPPORT
@@ -61,12 +61,20 @@ module uart_master #(
 
     // read & write to fifo
     output                       tx_fifo_write_en,
-    output                       rx_fifo_read_en
+    output                       rx_fifo_read_en,
+
+    // Probes
+    output                       [31:0] probe
 );
-    reg busy, new_tx_data;
+    
+    reg busy, new_tx_data; // TODO: check busy functionality
     assign PREADY = PENABLE & ~busy;
 
+    assign probe = tx_data_reg;
+
     // Memory Mapped Registers
+        // TODO: Verify functionality of each registers
+
         reg [31:0] baud        ;
         reg [31:0] tx_data_reg ;
         reg [31:0] rx_data_reg ;
@@ -97,7 +105,7 @@ module uart_master #(
         assign PARITY_MODE  = control[1:0];
         assign STOP_BITS    = control[3:2];
 
-        always@(posedge clk, negedge resetn) begin // asynchronous reseting and Writing Registers
+        always@(posedge (PSELx & clk), negedge resetn) begin // asynchronous reseting and Writing Registers
             busy   = 1'b0;
             PSLVERR = 1'b0;
 
@@ -146,28 +154,25 @@ module uart_master #(
                         TX_DONE, TX_NOTFULL, RX_NOTFULL, RX_NOTEMPTY};
             `endif
 
-            new_tx_data <= (tx_state == TX_FETCH_BUS)? 1'b0 : new_tx_data;
 
             if (!resetn) begin // reset register to default values
                 baud         = 'ha2c;
                 tx_data_reg  = 'h0;
                 status       = 'h7;
-                control      = 'h0;
+                control      = 'h4;
                 status_clear = 'h0;
                 interrupt_en = 'h0;
-                new_tx_data  <= 'h0;
                 `ifdef DMA_SUPPORT
                 dma_tx_baddress = 'h8000_0000;
                 dma_rx_baddress = 'hc000_0000;
                 `endif
                 strb_reg     = 'h0;
             end
-            else if (PSELx && PREADY) begin
+            else if (PREADY) begin
                 if (PWRITE) begin // write to registers
                     case (PADDR)
                         (BASE_MMR_ADDRESS + 'h00): begin
                             if (tx_state == TX_IDLE) begin
-                                new_tx_data         <= 1'b1;
                                 strb_reg            <= PSTRB;
                                 tx_data_reg[31:24]  <= (PSTRB[3])? PWDATA[31:24] : tx_data_reg[31:24];
                                 tx_data_reg[23:16]  <= (PSTRB[2])? PWDATA[23:16] : tx_data_reg[23:16];
@@ -228,7 +233,7 @@ module uart_master #(
                             dma_rx_size[07:00]  <= (PSTRB[0])? PWDATA[07:00] : dma_rx_size[07:00];
                         end
                         `endif
-                        default:               PSLVERR      = 1'b1; // TODO: generating an rtl_rom
+                        default:               PSLVERR      = 1'b1; // NOTE: generating an rtl_rom
                     endcase
                 end
                 else begin // read from registers
@@ -238,13 +243,15 @@ module uart_master #(
                         (BASE_MMR_ADDRESS + 'h0c): PRDATA = status ;
                         (BASE_MMR_ADDRESS + 'h10): PRDATA = control;
                         (BASE_MMR_ADDRESS + 'h18): PRDATA = interrupt_en;
-                        default:               PSLVERR      = 1'b1; // TODO: generating an rtl_rom
+                        default:               PSLVERR      = 1'b1; // NOTE: generating an rtl_rom
                     endcase
                 end
             end
         end
 
     // Data capture from DMA/Bus for tx
+        // TODO: Verify functionality
+
         localparam [1:0] TX_IDLE = 2'd0, TX_FETCH_BUS = 2'd1, TX_FETCH_DMA = 2'd2, TX_SEND_DATA = 2'd3; // states for data fetch
 
         reg [3:0] tx_strb, tx_strb_next;
@@ -262,14 +269,15 @@ module uart_master #(
                 if (!resetn) begin
                     tx_state  <= TX_IDLE;
                     tx_buffer <= 0;
-                    tx_strb      <= 'd0;
+                    tx_strb   <= 'd0;
                     `ifdef DMA_SUPPORT
                         dma_read_address <= dma_tx_baddress;
                     `endif
                 end else begin
-                    tx_state  <= tx_state_next; // TODO: generating an rtl_rom
+                    tx_state  <= tx_state_next; // NOTE: generating an rtl_rom
                     tx_buffer <= tx_buffer_next;
                     tx_strb      <= tx_strb_next;
+                    new_tx_data <= (PADDR == (BASE_MMR_ADDRESS) && PWRITE)? 1'b1 : 1'b0;
                     `ifdef DMA_SUPPORT
                         dma_read_address <= dma_read_address_next;
                     `endif
@@ -337,6 +345,8 @@ module uart_master #(
             end
 
     // Write to DMA/bus from rx
+        // TODO: Verify functionality
+
         localparam [1:0] RX_IDLE = 2'd0, RX_RECEIVE_DATA = 2'd1, RX_SEND_DATA = 2'd2; // states for data fetch
 
         reg [3:0] rx_strb, rx_strb_next;
@@ -366,7 +376,7 @@ module uart_master #(
             always @(*) begin
                 rx_buffer_next = 'd0;
                 rx_strb_next   = 4'b0000;
-                rx_state_next  = rx_state; // TODO: generating an rtl_rom
+                rx_state_next  = rx_state; // NOTE: generating an rtl_rom
                 rx_data_next   = rx_data_reg;
 
                 case (rx_state)
