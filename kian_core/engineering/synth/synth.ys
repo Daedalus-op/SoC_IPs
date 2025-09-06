@@ -1,0 +1,6 @@
+read_liberty -lib /home/xubundadu/.volare/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+read_verilog ../kianv_harris_edition/*.v
+synth -top kianv_modified
+abc -liberty /home/xubundadu/.volare/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+stat
+write_verilog synthesized_netlist.v

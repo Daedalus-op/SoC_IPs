@@ -25,7 +25,8 @@
 
 module uart_top #(
     parameter integer BUS_WIDTH     = 32, // number of data bits in a word
-              integer FIFO_DEPTH    = 4,
+              // integer FIFO_DEPTH    = 4,
+                      FIFO_DEPTH    = 4,
                       BASE_MMR_ADDRESS  = 32'h0000_0000,
                       BASE_DMA_ADDRESS  = 32'h1000_0000
 ) (
@@ -55,21 +56,29 @@ module uart_top #(
 
     output                       PREADY,  // Slave interface Ready
     output     [BUS_WIDTH - 1:0] PRDATA,  // Slave interface Read Data
-    output                       PSLVERR // Slave interface Transfer error
+    output                       PSLVERR, // Slave interface Transfer error
+
+    output                       probe_tick,
+    output                       probe_fifo_write_en,
+    output     [BUS_WIDTH - 1:0] probe_baud
 );
 
+    assign probe_baud = BAUD;
+    assign probe_tick = tick;
+    assign probe_fifo_write_en = tx_fifo_write_en;
+
     // Connection Signals
-    wire       tick;            // sample tick from baud rate generator
-    wire       rx_done_tick;    // data word received
-    wire       tx_done_tick;    // data transmission complete
-    wire       tx_fifo_full, tx_fifo_empty;
-    wire       rx_fifo_full, rx_fifo_empty;
-    wire       rx_fifo_read_en, tx_fifo_write_en;
-    wire [7:0] tx_data_out, tx_fifo_in;
-    wire [7:0] rx_data_in, rx_fifo_out;
-    wire [1:0] PARITY_MODE, STOP_BITS;
-    wire [31:0] BAUD;
-    wire PARITY_ERROR, FRAME_ERROR, BREAK_ERROR;
+        wire       tick;            // sample tick from baud rate generator
+        wire       rx_done_tick;    // data word received
+        wire       tx_done_tick;    // data transmission complete
+        wire       tx_fifo_full, tx_fifo_empty;
+        wire       rx_fifo_full, rx_fifo_empty;
+        wire       rx_fifo_read_en, tx_fifo_write_en;
+        wire [7:0] tx_data_out, tx_fifo_in;
+        wire [7:0] rx_data_in, rx_fifo_out;
+        wire [1:0] PARITY_MODE, STOP_BITS;
+        wire [31:0] BAUD;
+        wire PARITY_ERROR, FRAME_ERROR, BREAK_ERROR;
 
     uart_master #(
         .BUS_WIDTH(BUS_WIDTH),
@@ -126,7 +135,7 @@ module uart_top #(
     baud_rate_generator #( // baud tick generator
     ) BAUD_RATE_GEN (
         .clk(PCLK),
-        .reset(PRESETn),
+        .resetn(PRESETn),
         .baud_rate(BAUD),
         .tick(tick)
     );
@@ -151,7 +160,7 @@ module uart_top #(
         .DATA_SIZE(8)
     ) RX_FIFO (
         .clk(tick),
-        .reset(PRESETn),
+        .resetn(PRESETn),
         .write_to_fifo(rx_done_tick),   // signal start writing to FIFO
         .read_from_fifo(rx_fifo_read_en),  // signal start reading from FIFO
         .write_data_in(rx_data_in),   // data word into FIFO
@@ -165,7 +174,7 @@ module uart_top #(
         .DATA_SIZE(8)
     ) TX_FIFO (
         .clk(tick),
-        .reset(PRESETn),
+        .resetn(PRESETn),
         .write_to_fifo(tx_fifo_write_en),   // signal start writing to FIFO
         .read_from_fifo(tx_done_tick),  // signal start reading from FIFO
         .write_data_in(tx_fifo_in),   // data word into FIFO

@@ -5,7 +5,7 @@ module fifo #(
               ADDR_SPACE_EXP = 4   // number of address bits (2^4 = 16 addresses)
 ) (
     input                      clk,             // FPGA clock           
-    input                      reset,           // reset button
+    input                      resetn,           // reset button
     input                      write_to_fifo,   // signal start writing to FIFO
     input                      read_from_fifo,  // signal start reading from FIFO
     input      [DATA_SIZE-1:0] write_data_in,   // data word into FIFO
@@ -33,8 +33,8 @@ module fifo #(
 
   // FIFO control logic
   // register logic
-  always @(posedge clk or posedge reset)
-    if (reset) begin
+  always @(posedge clk or negedge resetn)
+    if (!resetn) begin
       current_write_addr <= 0;
       current_read_addr  <= 0;
       fifo_full          <= 1'b0;

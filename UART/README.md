@@ -8,7 +8,7 @@
                             │                             ┌──┬──┬──┬──┐     │        │    │            
                             │    ┌───────────────────┐    │  │  │  │  │     │        │    │            
 Rx ─────────────────────────│───►│   Reciever        ├───►┤  │  │  │  ├────►┤        │    │            
-                            │    └───────────────────┘    │  │  │  │  │     │        ├────│─────── Data
+                            │    └───────────────────┘    │  │  │  │  │     │        ├────│─────── Data (Bus)
                             │                   ▲         └──┴──┴──┴──┘     │ Master │    │            
                             │                   │                           │        │    │            
                             │                   │   ┌──────────────────┐    │        │◄───│─────── CLK 
@@ -22,7 +22,7 @@ Tx ◄────────────────────────�
                             │    └───────────────────┘    │  │  │  │  │     │        │    │            
                             │                             └──┴──┴──┴──┘     │        │    │            
                             │                                               │        │    │            
-            Interrupt ◄─────│───────────────────────────────────────────────┤        │    │            
+                            │                                               │        │────│──────► Interrupt     
                             │                                               │        │    │            
                             │                                               └────────┘    │            
                             └─────────────────────────────────────────────────────────────┘            
@@ -40,7 +40,7 @@ Tx ◄────────────────────────�
 - [ ] Verification
   - [ ] Code
   - [ ] Toggle
-  - [ ] Functional
+  - [x] Functional
 
 ## Register Mappings
 
@@ -57,6 +57,10 @@ Tx ◄────────────────────────�
 | dma_rx_baddress | 0x26         | write      | 32          | 0xC000_0000 | Register for base address in memory to store rx data to                         |
 | dma_tx_size     | 0x30         | write      | 32          | 0x0         | Size of the data to be taken from memory for transmission                       |
 | dma_rx_size     | 0x34         | write      | 32          | 0x0         | Size of the data to be stored in memory after receiving                         |
+
+
+> [!NOTE]
+> DMA_EN needs to enabled (in `src/uart_settings.vh`) to use dma related registers
 
 ### status register
 Status of the peripheral
@@ -87,9 +91,9 @@ Controls the behaviour of the UART Protocol
 ### status_clear register
 The corresponding bits are set to 1 to clear the status register from the errors
 
-| 31 - 4   | 3           | 2          | 1          | 0       |
-| -------- | ----------- | ---------- | ---------- | ------- |
-| Reserved | RX_NOTEMPTY | RX_NOTFULL | TX_NOTFULL | TX_DONE |
+| 31 - 8   | 7           | 6           | 5             | 4            | 3           | 2          | 1          | 0       |
+| -------- | ----------- | ----------- | ------------- | ------------ | ----------- | ---------- | ---------- | ------- |
+| Reserved | BREAK_ERROR | FRAME_ERROR | OVERRUN_ERROR | PARITY_ERROR | RX_NOTEMPTY | RX_NOTFULL | TX_NOTFULL | TX_DONE |
 
 ### interrupt_en register
 Enables the interrupt causes
