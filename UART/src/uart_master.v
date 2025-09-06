@@ -64,13 +64,16 @@ module uart_master #(
     output                       rx_fifo_read_en,
 
     // Probes
-    output                       [31:0] probe
+    output                       [31:0] probe_tx_reg,
+    output                       [ 1:0] probe_tx_state
 );
     
-    reg busy, new_tx_data; // TODO: check busy functionality
+    reg busy, busy_next, new_tx_data; // TODO: check busy functionality
     assign PREADY = PENABLE & ~busy;
 
-    assign probe = tx_data_reg;
+    assign probe_tx_reg = tx_data_reg; // TODO: temp
+    assign probe_tx_state = tx_state; // TODO: temp
+
 
     // Memory Mapped Registers
         // TODO: Verify functionality of each registers
@@ -105,11 +108,40 @@ module uart_master #(
         assign PARITY_MODE  = control[1:0];
         assign STOP_BITS    = control[3:2];
 
-        always@(posedge (PSELx & clk), negedge resetn) begin // asynchronous reseting and Writing Registers
-            busy   = 1'b0;
+        // busy fsm
+            always @(posedge clk or negedge resetn) begin
+                if (!resetn) begin
+                    busy <= 1'b0;
+                end else begin
+                    busy <= busy_next;
+                end
+            end
+
+            always @(*) begin
+                busy_next = busy;
+                case (busy )
+                    0: begin
+                        if (PSELx && PWRITE && (PADDR == BASE_MMR_ADDRESS + 'h00)) begin
+                            if (tx_state != TX_IDLE) begin
+                                busy_next <= 1'b1;
+                            end
+                        end 
+                    end
+                    1: begin
+                        if (tx_state == TX_IDLE) begin
+                            busy_next <= 1'b0;
+                        end
+                    end
+                default: begin
+                    busy_next <= 1'b0;
+                end
+                endcase
+            end
+
+        always@(posedge (PSELx & clk), negedge resetn, negedge busy) begin // asynchronous reseting and Writing Registers
             PSLVERR = 1'b0;
 
-            // ERROR_reg logic
+            // ERROR_reg logic // TODO: fix the status clear functionality
                 if (!resetn)
                     BREAK_ERROR_reg <= 1'b0;
                 else if(status_clear[3])
@@ -172,15 +204,13 @@ module uart_master #(
                 if (PWRITE) begin // write to registers
                     case (PADDR)
                         (BASE_MMR_ADDRESS + 'h00): begin
-                            if (tx_state == TX_IDLE) begin
+                            if (tx_state == TX_IDLE) begin // || tx_state == TX_SEND_DATA) begin // TODO: improve delay (clock cycles) between writes to tx_data_reg
                                 strb_reg            <= PSTRB;
                                 tx_data_reg[31:24]  <= (PSTRB[3])? PWDATA[31:24] : tx_data_reg[31:24];
                                 tx_data_reg[23:16]  <= (PSTRB[2])? PWDATA[23:16] : tx_data_reg[23:16];
                                 tx_data_reg[15:08]  <= (PSTRB[1])? PWDATA[15:08] : tx_data_reg[15:08];
                                 tx_data_reg[07:00]  <= (PSTRB[0])? PWDATA[07:00] : tx_data_reg[07:00];
-                                busy = 1'b0;
                             end
-                            else busy = 1'b1;
                         end
                         (BASE_MMR_ADDRESS + 'h08): begin
                             baud[31:24]  <= (PSTRB[3])? PWDATA[31:24] : baud[31:24];
@@ -250,8 +280,6 @@ module uart_master #(
         end
 
     // Data capture from DMA/Bus for tx
-        // TODO: Verify functionality
-
         localparam [1:0] TX_IDLE = 2'd0, TX_FETCH_BUS = 2'd1, TX_FETCH_DMA = 2'd2, TX_SEND_DATA = 2'd3; // states for data fetch
 
         reg [3:0] tx_strb, tx_strb_next;
@@ -277,7 +305,7 @@ module uart_master #(
                     tx_state  <= tx_state_next; // NOTE: generating an rtl_rom
                     tx_buffer <= tx_buffer_next;
                     tx_strb      <= tx_strb_next;
-                    new_tx_data <= (PADDR == (BASE_MMR_ADDRESS) && PWRITE)? 1'b1 : 1'b0;
+                    new_tx_data <= (PADDR == (BASE_MMR_ADDRESS) && PWRITE && PREADY)? 1'b1 : 1'b0;
                     `ifdef DMA_SUPPORT
                         dma_read_address <= dma_read_address_next;
                     `endif
@@ -324,7 +352,7 @@ module uart_master #(
                         `endif
                     end
                     TX_SEND_DATA: begin
-                        if (TX_NOTFULL && tx_strb[0] != 0) begin
+                        if (TX_NOTFULL && tx_strb[1] != 0) begin
                             tx_strb_next = tx_strb >> 1;
                             tx_buffer_next = {8'd0, tx_buffer[31:8]};
                         end
@@ -335,7 +363,7 @@ module uart_master #(
                             DMA_TX_DONE = (dma_read_address == dma_tx_baddress + dma_tx_size);
                         else
                         `endif
-                            tx_state_next = (tx_strb[0])? TX_SEND_DATA : TX_IDLE;
+                            tx_state_next = (tx_strb[1])? TX_SEND_DATA : TX_IDLE;
 
                     end
                     default: begin
@@ -344,6 +372,7 @@ module uart_master #(
                 endcase
             end
 
+        
     // Write to DMA/bus from rx
         // TODO: Verify functionality
 
