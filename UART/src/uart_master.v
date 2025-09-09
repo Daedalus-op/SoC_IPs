@@ -59,6 +59,9 @@ module uart_master #(
     input                        BREAK_ERROR,
     output                       interrupt,
 
+    output reg                   settings_resetn,
+    output reg                   new_tx_data,
+
     // read & write to fifo
     output                       tx_fifo_write_en,
     output                       rx_fifo_read_en,
@@ -69,13 +72,8 @@ module uart_master #(
     output                              probe_frame_reg
 );
     
-    reg busy, busy_next, new_tx_data; // TODO: check busy functionality
+    reg busy, busy_next; // TODO: check busy functionality
     assign PREADY = PENABLE & ~busy;
-
-    assign probe_tx_reg = tx_data_reg; // TODO: temp
-    assign probe_tx_state = tx_state; // TODO: temp
-    assign probe_frame_reg = FRAME_ERROR_reg;
-
 
     // Memory Mapped Registers
         // TODO: Verify functionality of each registers
@@ -105,6 +103,7 @@ module uart_master #(
             `endif
 
         reg [1:0] tx_state, tx_state_next;
+        localparam [1:0] TX_IDLE = 2'd0, TX_FETCH_BUS = 2'd1, TX_FETCH_DMA = 2'd2, TX_SEND_DATA = 2'd3; // states for data fetch
 
         assign BAUD         = baud;
         assign PARITY_MODE  = control[1:0];
@@ -134,6 +133,7 @@ module uart_master #(
 
         // asynchronous reseting and Writing Registers
             always@(posedge clk, negedge busy) begin // , negedge resetn) begin // NOTE: causes error with yosys
+                settings_resetn = 1'b1;
                 PSLVERR = 1'b0;
 
                 // busy fsm switch
@@ -212,12 +212,14 @@ module uart_master #(
                                     baud[23:16]  <= (PSTRB[2])? PWDATA[23:16] : baud[23:16];
                                     baud[15:08]  <= (PSTRB[1])? PWDATA[15:08] : baud[15:08];
                                     baud[07:00]  <= (PSTRB[0])? PWDATA[07:00] : baud[07:00];
+                                    settings_resetn = 1'b0;
                                 end
                                 (BASE_MMR_ADDRESS + 'h10): begin
                                     control[31:24]  <= (PSTRB[3])? PWDATA[31:24] : control[31:24];
                                     control[23:16]  <= (PSTRB[2])? PWDATA[23:16] : control[23:16];
                                     control[15:08]  <= (PSTRB[1])? PWDATA[15:08] : control[15:08];
                                     control[07:00]  <= (PSTRB[0])? PWDATA[07:00] : control[07:00];
+                                    settings_resetn = 1'b0;
                                 end
                                 (BASE_MMR_ADDRESS + 'h14): begin
                                     status_clear[31:24]  <= (PSTRB[3])? PWDATA[31:24] : status_clear[31:24];
@@ -275,8 +277,6 @@ module uart_master #(
             end
 
     // Data capture from DMA/Bus for tx
-        localparam [1:0] TX_IDLE = 2'd0, TX_FETCH_BUS = 2'd1, TX_FETCH_DMA = 2'd2, TX_SEND_DATA = 2'd3; // states for data fetch
-
         reg [3:0] tx_strb, tx_strb_next;
 
         assign tx_fifo_write_en = ((tx_state == TX_SEND_DATA) && TX_NOTFULL);
@@ -286,7 +286,7 @@ module uart_master #(
         reg [BUS_WIDTH - 1:0] dma_read_address_next;
         `endif
 
-        assign TX_DATA      = tx_buffer[7:0];
+        assign TX_DATA      = (tx_state == TX_IDLE)? 8'h16 : tx_buffer[7:0];
         // Register Logic
             always @(posedge clk, negedge resetn, negedge busy) // TODO: check negedge busy
                 if (!resetn) begin
@@ -299,7 +299,7 @@ module uart_master #(
                 end else begin
                     tx_state  <= tx_state_next; // NOTE: generating an rtl_rom
                     tx_buffer <= tx_buffer_next;
-                    tx_strb      <= tx_strb_next;
+                    tx_strb     <= tx_strb_next;
                     new_tx_data <= ((PADDR == BASE_MMR_ADDRESS) && PWRITE && PREADY)? 1'b1 : 1'b0;
                     `ifdef DMA_SUPPORT
                         dma_read_address <= dma_read_address_next;
@@ -443,5 +443,9 @@ module uart_master #(
         wire [31:0] interrupt_mask;
         assign interrupt_mask = interrupt_en & status;
         assign interrupt = |interrupt_mask;
+
+    assign probe_tx_reg = tx_data_reg; // TODO: temp
+    assign probe_tx_state = tx_state; // TODO: temp
+    assign probe_frame_reg = FRAME_ERROR_reg;
 
 endmodule

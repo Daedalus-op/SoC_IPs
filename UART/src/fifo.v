@@ -22,10 +22,13 @@ module fifo #(
   wire write_enabled, read_enabled;
 
   // register file (memory) write operation
-  always @(posedge clk) memory[current_write_addr] <= (write_enabled)? write_data_in : 'dz;
+  always @(posedge clk) if (write_enabled) memory[current_write_addr] <= write_data_in;
 
   // register file (memory) read operation
-  always @(*) read_data_out <= (read_enabled)? memory[current_read_addr] : 'dz;
+  always @(clk) begin
+    if (read_enabled) read_data_out = memory[current_read_addr];
+    // else read_data_out = 'd0;// 'dz; // NOTE: temp for verilator
+  end
 
   // only allow write operation when FIFO is NOT full
   assign write_enabled = write_to_fifo & ~fifo_full;
@@ -83,8 +86,7 @@ module fifo #(
         current_read_addr_buff  = next_read_addr;
       end
 
-      default:
-        current_write_addr_buff = next_write_addr;
+      default: ;
     endcase
   end
 

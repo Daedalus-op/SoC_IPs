@@ -2,3 +2,8 @@ kian_core/engineering/bench/obj_dir
 kian_core/riscof_work
 UART/verif/obj_dir
 UART/verif/waveform.vcd
+UART/verif/xsim.dir
+UART/verif/work.test_top.wdb
+UART/verif/*.log
+UART/verif/*.jou
+UART/verif/*.pb

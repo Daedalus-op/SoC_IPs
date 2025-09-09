@@ -1,6 +1,12 @@
 `timescale 1ns/1ns
 
-module test_top;
+module test_top; 
+    // (
+    // input logic clk,
+    // input logic resetn,
+    // output logic sim_done
+    // );
+    logic sim_done;
 
     // probe wires
         logic [31:0] probe_baud;
@@ -56,27 +62,26 @@ module test_top;
 	      );
 
     initial begin
-        PCLK <= 0;
+        PCLK = 0;
         forever #5 PCLK = ~PCLK;
     end
 
     initial begin // Test cases
+                                       sim_done = 0;
                   @(posedge PCLK);     PRESETn = 1; PSELx = 0; PENABLE = 0;
                   @(posedge PCLK);     PRESETn = 0;
                   @(posedge PCLK);     PRESETn = 1;
         repeat(2) @(posedge PCLK);
 
-                  @(posedge PCLK)      Write_data(baud_address, 'd3, 4'b0001);
+                  @(posedge PCLK)      Write_data(baud_address, 'd2, 4'b0111);
         repeat(2) @(posedge PCLK);
 
                   @(posedge PCLK)      Read_data(baud_address);
-        repeat(2) @(posedge PCLK);
-
-                  @(posedge PCLK)      PRESETn = 0;
-                  @(posedge PCLK)      PRESETn = 1;
-        repeat(2) @(posedge PCLK);
-
                   @(posedge PCLK)      Write_data(tx_data_address, 32'hdeadbeef, 4'b1111);
+        repeat(2) @(posedge PCLK);
+
+        repeat(2) @(posedge PCLK);
+
 
                   @(posedge PCLK)      Write_data(tx_data_address, 32'h1111dcba, 4'b0011);
 
@@ -86,7 +91,7 @@ module test_top;
 
                   @(posedge PCLK)      Write_data(status_clear_address, 32'h000000ff, 4'b0001);
 
-        repeat(4) @(posedge PCLK);
+        repeat(200) @(posedge PCLK);     sim_done = 1;
 
         $finish;
     end
@@ -139,11 +144,11 @@ module test_top;
         end
     endtask
 
-    //
-    // initial
-    // begin
-    //   $dumpfile("apbWaveform.vcd");
-    //   $dumpvars;
-    // end
+
+    initial
+    begin
+        $dumpfile("waveform.vcd");
+        $dumpvars;
+    end
 
 endmodule

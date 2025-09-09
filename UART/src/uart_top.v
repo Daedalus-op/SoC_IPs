@@ -26,7 +26,7 @@
 module uart_top #(
     parameter integer BUS_WIDTH     = 32, // number of data bits in a word
               // integer FIFO_DEPTH    = 4,
-                      FIFO_DEPTH    = 4,
+                      FIFO_DEPTH    = 2,
                       BASE_MMR_ADDRESS  = 32'h0000_0000,
                       BASE_DMA_ADDRESS  = 32'h1000_0000
 ) (
@@ -52,7 +52,7 @@ module uart_top #(
     input                        PENABLE, // Enable
     input                        PWRITE,  // Direction
     input      [BUS_WIDTH - 1:0] PWDATA,  // Write data
-    input                        PSTRB,   // Write strobes
+    input                 [ 3:0] PSTRB,   // Write strobes
 
     output                       PREADY,  // Slave interface Ready
     output     [BUS_WIDTH - 1:0] PRDATA,  // Slave interface Read Data
@@ -62,13 +62,10 @@ module uart_top #(
     output                       probe_fifo_write_en,
     output     [BUS_WIDTH - 1:0] probe_baud
 );
-
-    assign probe_baud = BAUD;
-    assign probe_tick = tick;
-    assign probe_fifo_write_en = tx_fifo_write_en;
-
     // Connection Signals
         wire       tick;            // sample tick from baud rate generator
+        wire       settings_resetn;  // reset blocks after changing settings
+        wire       new_tx_data;
         wire       rx_done_tick;    // data word received
         wire       tx_done_tick;    // data transmission complete
         wire       tx_fifo_full, tx_fifo_empty;
@@ -127,6 +124,9 @@ module uart_top #(
         .BREAK_ERROR(BREAK_ERROR),
         .interrupt(interrupt),
 
+        .settings_resetn(settings_resetn),
+        .new_tx_data(new_tx_data),
+
         // read & write to fifo
         .tx_fifo_write_en(tx_fifo_write_en),
         .rx_fifo_read_en(rx_fifo_read_en)
@@ -135,7 +135,7 @@ module uart_top #(
     baud_rate_generator #( // baud tick generator
     ) BAUD_RATE_GEN (
         .clk(PCLK),
-        .resetn(PRESETn),
+        .resetn(PRESETn & settings_resetn),
         .baud_rate(BAUD),
         .tick(tick)
     );
@@ -159,7 +159,7 @@ module uart_top #(
         .ADDR_SPACE_EXP(FIFO_DEPTH),  // number of address bits (2^4 = 16 addresses)
         .DATA_SIZE(8)
     ) RX_FIFO (
-        .clk(tick),
+        .clk(PCLK),
         .resetn(PRESETn),
         .write_to_fifo(rx_done_tick),   // signal start writing to FIFO
         .read_from_fifo(rx_fifo_read_en),  // signal start reading from FIFO
@@ -173,10 +173,10 @@ module uart_top #(
         .ADDR_SPACE_EXP(FIFO_DEPTH),  // number of address bits (2^4 = 16 addresses)
         .DATA_SIZE(8)
     ) TX_FIFO (
-        .clk(tick),
+        .clk(PCLK),
         .resetn(PRESETn),
         .write_to_fifo(tx_fifo_write_en),   // signal start writing to FIFO
-        .read_from_fifo(tx_done_tick),  // signal start reading from FIFO
+        .read_from_fifo(tx_done_tick | new_tx_data),  // signal start reading from FIFO
         .write_data_in(tx_fifo_in),   // data word into FIFO
         .read_data_out(tx_data_out),   // data word out of FIFO
         .empty(tx_fifo_empty),           // FIFO is empty (no read)
@@ -195,5 +195,9 @@ module uart_top #(
         .tx_done(tx_done_tick),
         .tx(tx)
     );
+
+    assign probe_baud = BAUD;
+    assign probe_tick = tick;
+    assign probe_fifo_write_en = tx_fifo_write_en;
 
 endmodule

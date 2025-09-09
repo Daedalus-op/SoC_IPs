@@ -21,7 +21,7 @@ module uart_receiver (
     // Registers
         reg [1:0] state, next_state;  // state registers
         reg [1:0] tick_reg, tick_next;  // number of ticks received from baud rate generator
-        reg [2:0] nbits_reg, nbits_next;  // number of bits received in data state
+        reg [3:0] nbits_reg, nbits_next;  // number of bits received in data state
         reg [8:0] data_reg, data_next;  // reassembled data word
 
     // Register Logic
@@ -62,24 +62,24 @@ module uart_receiver (
                 end
                 data:
                 if (sample_tick)
-                    if (tick_reg == 3) begin
+                    if (tick_reg == 2'd3) begin
                         tick_next = 0;
-                        data_next = {rx, data_reg[7:1]};
+                        data_next = {rx, data_reg[8:1]};
 
-                        if (PARITY_ENABLE && nbits_reg == 8) next_state = stop;
-                        else if (!PARITY_ENABLE && nbits_reg == 7) next_state = stop;
+                        if (PARITY_ENABLE && nbits_reg == 4'd8) next_state = stop;
+                        else if (!PARITY_ENABLE && nbits_reg == 4'd7) next_state = stop;
                         else nbits_next = nbits_reg + 1;
 
                     end else tick_next = tick_reg + 1;
                 stop:
                 if (sample_tick)
-                    if (tick_reg == 3) begin
+                    if (tick_reg == 2'd3) begin
                         tick_next = 0;
 
                         if(STOP_BITS != 0 && rx == 0) FRAME_ERROR = 1'b1;
                         if(STOP_BITS != 0 && data_reg == 0) BREAK_ERROR = 1'b1;
 
-                        if (nbits_reg == (3'd7 + {1'b0, { 1'b0, PARITY_ENABLE} + STOP_BITS })) begin
+                        if (nbits_reg == (4'd7 + {2'b0, { 1'b0, PARITY_ENABLE} + STOP_BITS })) begin
                             next_state = idle;
                             data_ready = 1'b1;
                         end

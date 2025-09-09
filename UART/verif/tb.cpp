@@ -1,5 +1,5 @@
 #include "verilated.h"
-#include "Vtest_master.h"      // Generated top module header from Verilator
+#include "Vtest_top.h"      // Generated top module header from Verilator
 #include "verilated_vcd_c.h"  // Optional: for waveform dumping
 #include <iostream>
 
@@ -13,7 +13,7 @@ double sc_time_stamp() {
 
 int main(int argc, char** argv, char** env) {
     Verilated::commandArgs(argc, argv);
-    Vtest_master* top = new Vtest_master;
+    Vtest_top* top = new Vtest_top;
 
     VerilatedVcdC* tfp = nullptr;
     bool waveform_on = false;

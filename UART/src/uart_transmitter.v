@@ -18,7 +18,7 @@ module uart_transmitter (
     // Registers
         reg [1:0] state, next_state;  // state registers
         reg [1:0] tick_reg, tick_next;  // number of ticks received from baud rate generator
-        reg [2:0] nbits_reg, nbits_next;  // number of bits transmitted in data state
+        reg [3:0] nbits_reg, nbits_next;  // number of bits transmitted in data state
         reg [8:0] data_reg, data_next;  // assembled data word to transmit serially
         reg tx_reg, tx_next;  // data filter for potential glitches
 
@@ -54,7 +54,7 @@ module uart_transmitter (
             case (state)
                 idle: begin  // no data in FIFO
                     tx_next = 1'b1;  // transmit idle
-                    if (tx_start) begin  // when FIFO is NOT empty
+                    if (tx_start && (data_in != 8'h16)) begin  // when FIFO is NOT empty
                         next_state = start;
                         tick_next    = 0;
                         data_next    = {parity_ref, data_in};
@@ -64,7 +64,7 @@ module uart_transmitter (
                 start: begin
                     tx_next = 1'b0;  // start bit
                     if (sample_tick)
-                        if (tick_reg == 3) begin
+                        if (tick_reg == 2'd3) begin
                             next_state = data;
                             tick_next    = 0;
                             nbits_next = 0;
@@ -74,30 +74,30 @@ module uart_transmitter (
                 data: begin
                     tx_next = data_reg[0];
                     if (sample_tick)
-                        if (tick_reg == 3) begin
+                        if (tick_reg == 2'd3) begin
                             tick_next = 0;
                             data_next = data_reg >> 1;
 
-                            if (PARITY_ENABLE && nbits_reg == 8) next_state = stop;
-                            else if (!PARITY_ENABLE && nbits_reg == 7) next_state = stop;
-                            else nbits_next = nbits_reg + 1;
+                            if (PARITY_ENABLE && nbits_reg == 4'd8) next_state = stop;
+                            else if (!PARITY_ENABLE && nbits_reg == 4'd7) next_state = stop;
+                            else nbits_next = nbits_reg + 4'd1;
 
-                        end else tick_next = tick_reg + 1;
+                        end else tick_next = tick_reg + 2'd1;
                 end
 
                 stop: begin
                     tx_next = 1'b1;  // back to idle
                     if (sample_tick)
-                        if (tick_reg == 3) begin
+                        if (tick_reg == 2'd3) begin
                             tick_next = 0;
 
-                            if (nbits_reg == (3'd7 + {1'b0, { 1'b0, PARITY_ENABLE} + STOP_BITS })) begin
+                            if (nbits_reg == (4'd7 + {2'b0, { 1'b0, PARITY_ENABLE} + STOP_BITS })) begin
                                 next_state = idle;
                                 tx_done = 1'b1;
                             end
-                            else nbits_next = nbits_reg + 1;
+                            else nbits_next = nbits_reg + 4'd1;
 
-                        end else tick_next = tick_reg + 1;
+                        end else tick_next = tick_reg + 2'd1;
                 end
             endcase
         end
