@@ -11,7 +11,8 @@ module uart_receiver (
     output           [7:0] data_out,
     output                 PARITY_ERROR,
     output reg             FRAME_ERROR,
-    output reg             BREAK_ERROR
+    output reg             BREAK_ERROR,
+    output wire debug_start, debug_stop, divs
 );
     wire PARITY_ENABLE = (PARITY_MODE == 2'd1 || PARITY_MODE == 2'd2);
 
@@ -23,6 +24,11 @@ module uart_receiver (
         reg [1:0] tick_reg, tick_next;  // number of ticks received from baud rate generator
         reg [3:0] nbits_reg, nbits_next;  // number of bits received in data state
         reg [8:0] data_reg, data_next;  // reassembled data word
+
+        reg debug;
+        assign debug_start = state == start;
+        assign debug_stop  = state == stop;
+        assign divs = tick_reg == 2'd3;
 
     // Register Logic
         always @(posedge clk, negedge resetn)
@@ -40,6 +46,7 @@ module uart_receiver (
 
     // State Machine Logic
         always @(*) begin
+            debug = 0;
             next_state  = state;
             data_ready  = 1'b0;
             tick_next   = tick_reg;
@@ -56,15 +63,19 @@ module uart_receiver (
                 end
                 start:
                 if (sample_tick) begin
-                    next_state = data;
-                    tick_next  = 0;
-                    nbits_next = 0;
+                    // if (tick_reg == 2'd1) begin
+                        debug = 1;
+                        next_state = data;
+                        data_next  = 9'd0;
+                        tick_next  = 0;
+                        nbits_next = 0;
+                    // end else tick_next = tick_reg + 1;
                 end
                 data:
                 if (sample_tick)
                     if (tick_reg == 2'd3) begin
                         tick_next = 0;
-                        data_next = {rx, data_reg[8:1]};
+                        data_next = (PARITY_ENABLE)? {rx, data_reg[8:1]} : {1'b0, rx, data_reg[7:1]};
 
                         if (PARITY_ENABLE && nbits_reg == 4'd8) next_state = stop;
                         else if (!PARITY_ENABLE && nbits_reg == 4'd7) next_state = stop;
@@ -73,11 +84,11 @@ module uart_receiver (
                     end else tick_next = tick_reg + 1;
                 stop:
                 if (sample_tick)
-                    if (tick_reg == 2'd3) begin
+                    if (tick_reg == 2'd1) begin
                         tick_next = 0;
 
                         if(STOP_BITS != 0 && rx == 0) FRAME_ERROR = 1'b1;
-                        if(STOP_BITS != 0 && data_reg == 0) BREAK_ERROR = 1'b1;
+                        if(STOP_BITS != 0 && data_reg == 'd0) BREAK_ERROR = 1'b1;
 
                         if (nbits_reg == (4'd7 + {2'b0, { 1'b0, PARITY_ENABLE} + STOP_BITS })) begin
                             next_state = idle;
@@ -92,7 +103,7 @@ module uart_receiver (
     // Parity check for rx
         wire parity_ref = (PARITY_MODE == 2'd0 || PARITY_MODE == 2'd3)? 0 : (PARITY_MODE == 2'd1)? ~(^data_reg[7:0]) : (^data_reg[7:0]);
         
-        assign PARITY_ERROR = (PARITY_ENABLE) && (parity_ref == data_reg[8]);
+        assign PARITY_ERROR = (PARITY_ENABLE) && (parity_ref == data_reg[8]) && (nbits_reg == 4'd8);
 
     // Output Logic
         assign data_out = data_reg[7:0];

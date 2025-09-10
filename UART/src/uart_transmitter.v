@@ -1,14 +1,15 @@
 // UART Transmitter for the UART System
 
 module uart_transmitter (
-    input                  clk,   // basys 3 FPGA
-    input                  resetn,        // resetn
-    input                  tx_start,     // begin data transmission (FIFO NOT empty)
+    input                  clk,
+    input                  resetn,
+    input                  tx_start,     // begin data transmission
     input                  sample_tick,  // from baud rate generator
     input            [1:0] PARITY_MODE,
     input            [1:0] STOP_BITS,
     input            [7:0] data_in,      // data word from FIFO
     output reg             tx_done,      // end of transmission
+    output                 TX_FREE,
     output                 tx            // transmitter data line
 );
 
@@ -101,7 +102,9 @@ module uart_transmitter (
                 end
             endcase
         end
-        
+
+        assign TX_FREE = (next_state == idle);
+
     // Output Logic
         assign tx = tx_reg;
 

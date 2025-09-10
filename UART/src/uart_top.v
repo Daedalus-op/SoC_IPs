@@ -1,10 +1,6 @@
 `include "uart_settings.vh"
 
 //////////////////////////////////////////////////////////////////////////////////
-//
-// TODO: Synchronise FIFOs
-//
-//////////////////////////////////////////////////////////////////////////////////
 // Top Module for the Complete UART System
 //
 // Setup for 9600 Baud Rate
@@ -27,8 +23,7 @@ module uart_top #(
     parameter integer BUS_WIDTH     = 32, // number of data bits in a word
               // integer FIFO_DEPTH    = 4,
                       FIFO_DEPTH    = 2,
-                      BASE_MMR_ADDRESS  = 32'h0000_0000,
-                      BASE_DMA_ADDRESS  = 32'h1000_0000
+                      BASE_MMR_ADDRESS  = 32'h0000_0000
 ) (
     // uart ports
     input                        rx,
@@ -36,18 +31,11 @@ module uart_top #(
 
     output                       interrupt,
 
-    // dma ports
-    `ifdef DMA_SUPPORT
-    input  [BUS_WIDTH - 1:0] dma_read_port,
-    output [BUS_WIDTH - 1:0] dma_write_port,
-    `endif
-
     // APB ports
     input                        PCLK,
     input                        PRESETn, // System bus equivalent Reset
 
     input      [BUS_WIDTH - 1:0] PADDR,   // Address
-    // input                        PPROT,   // Protection type
     input                        PSELx,   // Select
     input                        PENABLE, // Enable
     input                        PWRITE,  // Direction
@@ -59,35 +47,33 @@ module uart_top #(
     output                       PSLVERR, // Slave interface Transfer error
 
     output                       probe_tick,
-    output                       probe_fifo_write_en,
+    output                       probe_busy,
     output     [BUS_WIDTH - 1:0] probe_baud
 );
     // Connection Signals
         wire       tick;            // sample tick from baud rate generator
         wire       settings_resetn;  // reset blocks after changing settings
-        wire       new_tx_data;
+        wire       tx_data_lock;
+        wire       tx_free;
+        wire       tx_start;
         wire       rx_done_tick;    // data word received
         wire       tx_done_tick;    // data transmission complete
-        wire       tx_fifo_full, tx_fifo_empty;
-        wire       rx_fifo_full, rx_fifo_empty;
-        wire       rx_fifo_read_en, tx_fifo_write_en;
-        wire [7:0] tx_data_out, tx_fifo_in;
-        wire [7:0] rx_data_in, rx_fifo_out;
+        wire [7:0] rx_data_in;
+        wire [7:0] tx_data;
         wire [1:0] PARITY_MODE, STOP_BITS;
         wire [31:0] BAUD;
         wire PARITY_ERROR, FRAME_ERROR, BREAK_ERROR;
+        wire TX_REG_FREE;
 
     uart_master #(
         .BUS_WIDTH(BUS_WIDTH),
-        .BASE_MMR_ADDRESS(BASE_MMR_ADDRESS),
-        .BASE_DMA_ADDRESS(BASE_DMA_ADDRESS)
+        .BASE_MMR_ADDRESS(BASE_MMR_ADDRESS)
     ) UART_MASTER (
         .clk(PCLK),
         .resetn(PRESETn),
 
         // apb bus ports
         .PADDR(PADDR),     // Address
-        // .PPROT(PPROT),     // Protection type //  TODO: pprot required?
         .PSELx(PSELx),     // Select
         .PENABLE(PENABLE), // Enable
         .PWRITE(PWRITE),   // Direction
@@ -98,13 +84,8 @@ module uart_top #(
         .PRDATA(PRDATA),   // Slave interface Read Data
         .PSLVERR(PSLVERR), // Slave interface transfer error
 
-        `ifdef DMA_SUPPORT
-        .dma_tx_data(dma_read_port),
-        .dma_rx_data(dma_write_port),
-        `endif
-
-        .TX_DATA(tx_fifo_in),
-        .RX_DATA(rx_fifo_out),
+        .TX_DATA(tx_data),
+        .RX_DATA(rx_data_in),
 
         // protocol settings
         .BAUD(BAUD),
@@ -113,23 +94,20 @@ module uart_top #(
 
         // status signals
         .TX_DONE(tx_done_tick),
-        .TX_NOTFULL(!tx_fifo_full),
-        .RX_NOTFULL(!rx_fifo_full),
-        .RX_NOTEMPTY(!rx_fifo_empty),
+        .TX_FREE(tx_free),
+        .RX_DONE(rx_done_tick),
 
         // interrupt signals
         .PARITY_ERROR(PARITY_ERROR),
         .FRAME_ERROR(FRAME_ERROR),
-        .OVERRUN_ERROR(rx_done_tick & rx_fifo_full),
+        // .OVERRUN_ERROR(rx_done_tick & rx_fifo_full),
         .BREAK_ERROR(BREAK_ERROR),
         .interrupt(interrupt),
 
         .settings_resetn(settings_resetn),
-        .new_tx_data(new_tx_data),
-
-        // read & write to fifo
-        .tx_fifo_write_en(tx_fifo_write_en),
-        .rx_fifo_read_en(rx_fifo_read_en)
+        .tx_start(tx_start),
+        .tx_data_lock(tx_data_lock),
+        .TX_REG_FREE(TX_REG_FREE)
     );
 
     baud_rate_generator #( // baud tick generator
@@ -155,49 +133,21 @@ module uart_top #(
         .data_out(rx_data_in)
     );
 
-    fifo #(
-        .ADDR_SPACE_EXP(FIFO_DEPTH),  // number of address bits (2^4 = 16 addresses)
-        .DATA_SIZE(8)
-    ) RX_FIFO (
-        .clk(PCLK),
-        .resetn(PRESETn),
-        .write_to_fifo(rx_done_tick),   // signal start writing to FIFO
-        .read_from_fifo(rx_fifo_read_en),  // signal start reading from FIFO
-        .write_data_in(rx_data_in),   // data word into FIFO
-        .read_data_out(rx_fifo_out),   // data word out of FIFO
-        .empty(rx_fifo_empty),           // FIFO is empty (no read)
-        .full(rx_fifo_full)             // FIFO is full (no write)
-    );
-
-    fifo #(
-        .ADDR_SPACE_EXP(FIFO_DEPTH),  // number of address bits (2^4 = 16 addresses)
-        .DATA_SIZE(8)
-    ) TX_FIFO (
-        .clk(PCLK),
-        .resetn(PRESETn),
-        .write_to_fifo(tx_fifo_write_en),   // signal start writing to FIFO
-        .read_from_fifo(tx_done_tick | new_tx_data),  // signal start reading from FIFO
-        .write_data_in(tx_fifo_in),   // data word into FIFO
-        .read_data_out(tx_data_out),   // data word out of FIFO
-        .empty(tx_fifo_empty),           // FIFO is empty (no read)
-        .full(tx_fifo_full)             // FIFO is full (no write)
-    );
-
     uart_transmitter #(
     ) UART_TX_UNIT (
         .clk(PCLK),
         .resetn(PRESETn),
-        .tx_start(!tx_fifo_empty),
+        .tx_start(tx_start),
         .sample_tick(tick),
         .PARITY_MODE(PARITY_MODE),
         .STOP_BITS(STOP_BITS),
-        .data_in(tx_data_out),
+        .TX_FREE(tx_free),
+        .data_in(tx_data),
         .tx_done(tx_done_tick),
         .tx(tx)
     );
 
     assign probe_baud = BAUD;
     assign probe_tick = tick;
-    assign probe_fifo_write_en = tx_fifo_write_en;
 
 endmodule

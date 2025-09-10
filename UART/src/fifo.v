@@ -27,7 +27,7 @@ module fifo #(
   // register file (memory) read operation
   always @(clk) begin
     if (read_enabled) read_data_out = memory[current_read_addr];
-    // else read_data_out = 'd0;// 'dz; // NOTE: temp for verilator
+    else read_data_out = 'dz; // NOTE: temp for verilator
   end
 
   // only allow write operation when FIFO is NOT full

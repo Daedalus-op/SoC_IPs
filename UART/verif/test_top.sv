@@ -11,7 +11,6 @@ module test_top;
     // probe wires
         logic [31:0] probe_baud;
         logic [ 1:0] probe_tx_state;
-        // logic        probe_busy;
         logic        probe_tick;
         logic        probe_fifo_write_en;
  
@@ -57,7 +56,6 @@ module test_top;
             .PRDATA(PRDATA),   // Slave interface Read Data
             .PSLVERR(PSLVERR), // Slave interface transfer error
             .probe_baud(probe_baud),
-            .probe_fifo_write_en(probe_fifo_write_en),
             .probe_tick(probe_tick)
 	      );
 
@@ -73,28 +71,34 @@ module test_top;
                   @(posedge PCLK);     PRESETn = 1;
         repeat(2) @(posedge PCLK);
 
+                  @(posedge PCLK)      Write_data(control_address, 'd5, 4'b0111);
                   @(posedge PCLK)      Write_data(baud_address, 'd2, 4'b0111);
+                  @(posedge PCLK)      Write_data(interrupt_en_address, 32'h00000012, 4'b0011); // enable interrupt from tx
         repeat(2) @(posedge PCLK);
 
-                  @(posedge PCLK)      Read_data(baud_address);
-                  @(posedge PCLK)      Write_data(tx_data_address, 32'hdeadbeef, 4'b1111);
+                  @(posedge PCLK)      Write_data(tx_data_address, 32'ha5a5a5a5, 4'b1111);
+                  @(posedge PCLK)      Wait_for_finish;
         repeat(2) @(posedge PCLK);
 
-        repeat(2) @(posedge PCLK);
+
+                  @(posedge PCLK)      Write_data(tx_data_address, 32'h0000956a, 4'b0011);
+                  @(posedge PCLK)      Wait_for_finish;
 
 
-                  @(posedge PCLK)      Write_data(tx_data_address, 32'h1111dcba, 4'b0011);
 
-                  @(posedge PCLK)      Read_data(status_address);
-
-                  @(posedge PCLK)      Write_data(interrupt_en_address, 32'h00000040, 4'b0001);
-
-                  @(posedge PCLK)      Write_data(status_clear_address, 32'h000000ff, 4'b0001);
+                  @(posedge PCLK)      Write_data(interrupt_en_address, 32'h00000010, 4'b0011); // enable interrupt from tx
+        repeat(10) @(posedge PCLK)      Write_rx(8'ha5, 1'b0);
+                   @(posedge PCLK)      Write_rx(8'ha5, 1'b1);
 
         repeat(200) @(posedge PCLK);     sim_done = 1;
 
         $finish;
     end
+
+    // initial begin
+    //     repeat (1500) @(posedge PCLK); // timeout
+    //     $finish;
+    // end
 
     task Write_data;
         input [31:0] addr, data;
@@ -144,9 +148,31 @@ module test_top;
         end
     endtask
 
+    task Wait_for_finish;
+        begin 
+        @(posedge interrupt);
+            Read_data(status_address);
+            if (|PRDATA[7:4]) begin
+                $display("Error caught :- %0h", PRDATA[7:4]);
+                $finish;
+            end
+        end
+    endtask
 
-    initial
-    begin
+    task Write_rx;
+        input [7:0] data;
+        input       parity;
+        begin
+            repeat (4) @(posedge probe_tick); rx = 0;
+            for (int i = 0; i < 8 ; i++) begin
+                repeat (4) @(posedge probe_tick); rx = data[i];
+            end
+            repeat (4) @(posedge probe_tick); rx = parity;
+            repeat (4) @(posedge probe_tick); rx = 1;
+        end
+    endtask
+
+    initial begin
         $dumpfile("waveform.vcd");
         $dumpvars;
     end
