@@ -1,15 +1,15 @@
 // UART Transmitter for the UART System
 
-module uart_transmitter (
+module uart_transmitter #(
+    parameter PARITY_MODE = 0,
+              STOP_BITS = 1
+) (
     input                  clk,
     input                  resetn,
     input                  tx_start,     // begin data transmission
     input                  sample_tick,  // from baud rate generator
-    input            [1:0] PARITY_MODE,
-    input            [1:0] STOP_BITS,
     input            [7:0] data_in,      // data word from FIFO
     output reg             tx_done,      // end of transmission
-    output                 TX_FREE,
     output                 tx            // transmitter data line
 );
 
@@ -24,7 +24,7 @@ module uart_transmitter (
         reg tx_reg, tx_next;  // data filter for potential glitches
 
     // Parity concat for tx
-        wire PARITY_ENABLE = (PARITY_MODE == 2'd1 || PARITY_MODE == 2'd2);
+        parameter PARITY_ENABLE = (PARITY_MODE == 2'd1 || PARITY_MODE == 2'd2);
         wire parity_ref = (!PARITY_ENABLE)? 0 : (PARITY_MODE == 2'd1)? ~(^data_in) : (^data_in);
 
     // Register Logic
@@ -55,7 +55,7 @@ module uart_transmitter (
             case (state)
                 idle: begin  // no data in FIFO
                     tx_next = 1'b1;  // transmit idle
-                    if (tx_start && (data_in != 8'h16)) begin  // when FIFO is NOT empty
+                    if (tx_start) begin  // when FIFO is NOT empty
                         next_state = start;
                         tick_next    = 0;
                         data_next    = {parity_ref, data_in};
@@ -102,8 +102,6 @@ module uart_transmitter (
                 end
             endcase
         end
-
-        assign TX_FREE = (next_state == idle);
 
     // Output Logic
         assign tx = tx_reg;

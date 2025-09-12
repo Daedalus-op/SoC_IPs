@@ -29,17 +29,16 @@ module test_top;
     // register addresses
         localparam [31:0] tx_data_address        ='h0 ; // write     
         localparam [31:0] rx_data_address        ='h4 ; // read      
-        localparam [31:0] baud_address           ='h8 ; // read-write
-        localparam [31:0] status_address         ='hc ; // read      
-        localparam [31:0] control_address        ='h10; // read-write
-        localparam [31:0] status_clear_address   ='h14; // write     
-        localparam [31:0] interrupt_en_address   ='h18; // read-write
 
     // dut initialize
-        uart_top dut_c(
+        apb_uart_top #(
+            .BAUD(1),
+            .CLK_FREQ(8),
+            .PARITY_MODE(0),
+            .STOP_BITS(1)
+        ) dut (
             .rx(rx),
             .tx(tx),
-            .interrupt(interrupt),
 
             // APB ports
             .PCLK(PCLK),
@@ -55,7 +54,6 @@ module test_top;
             .PREADY(PREADY),   // Slave interface Ready
             .PRDATA(PRDATA),   // Slave interface Read Data
             .PSLVERR(PSLVERR), // Slave interface transfer error
-            .probe_baud(probe_baud),
             .probe_tick(probe_tick)
 	      );
 
@@ -67,28 +65,24 @@ module test_top;
     initial begin // Test cases
                                        sim_done = 0;
                   @(posedge PCLK);     PRESETn = 1; PSELx = 0; PENABLE = 0;
-                  @(posedge PCLK);     PRESETn = 0;
+                  @(posedge PCLK);     PRESETn = 0; rx = 1;
                   @(posedge PCLK);     PRESETn = 1;
         repeat(2) @(posedge PCLK);
 
-                  @(posedge PCLK)      Write_data(control_address, 'd5, 4'b0111);
-                  @(posedge PCLK)      Write_data(baud_address, 'd2, 4'b0111);
-                  @(posedge PCLK)      Write_data(interrupt_en_address, 32'h00000012, 4'b0011); // enable interrupt from tx
-        repeat(2) @(posedge PCLK);
-
-                  @(posedge PCLK)      Write_data(tx_data_address, 32'ha5a5a5a5, 4'b1111);
-                  @(posedge PCLK)      Wait_for_finish;
+                  @(posedge PCLK);      Write_data(tx_data_address, 32'h000000a5, 4'b1111);
         repeat(2) @(posedge PCLK);
 
 
-                  @(posedge PCLK)      Write_data(tx_data_address, 32'h0000956a, 4'b0011);
-                  @(posedge PCLK)      Wait_for_finish;
+                  @(posedge PCLK);      Write_data(tx_data_address, 32'h000000c3, 4'b0011);
+
+        repeat(100) @(posedge PCLK);    Write_data(tx_data_address, 32'h000000c3, 4'b0011);
+
+        repeat(10) @(posedge PCLK);     Write_rx(8'ha5, 1'b1);
+        repeat( 4) @(posedge PCLK);     Read_data(rx_data_address);
+        repeat(10) @(posedge PCLK);     Write_rx(8'hc3, 1'b1);
+        repeat( 4) @(posedge PCLK);     Read_data(rx_data_address);
 
 
-
-                  @(posedge PCLK)      Write_data(interrupt_en_address, 32'h00000010, 4'b0011); // enable interrupt from tx
-        repeat(10) @(posedge PCLK)      Write_rx(8'ha5, 1'b0);
-                   @(posedge PCLK)      Write_rx(8'ha5, 1'b1);
 
         repeat(200) @(posedge PCLK);     sim_done = 1;
 
@@ -145,17 +139,6 @@ module test_top;
 
             PENABLE = 0;
             PSELx = 0;
-        end
-    endtask
-
-    task Wait_for_finish;
-        begin 
-        @(posedge interrupt);
-            Read_data(status_address);
-            if (|PRDATA[7:4]) begin
-                $display("Error caught :- %0h", PRDATA[7:4]);
-                $finish;
-            end
         end
     endtask
 

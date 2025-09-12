@@ -33,7 +33,7 @@ verif/obj_dir/V$(TOP_MODULE): $(SRCS) verif/tb.cpp
 	make -j -C verif/obj_dir -f V$(TOP_MODULE).mk V$(TOP_MODULE)
 
 sim: waveform.vcd
-	surfer -c verif/surfer/surfer_commands -s verif/surfer/top_state.ron waveform.vcd &
+	surfer -s verif/surfer/state.ron waveform.vcd &
 
 clean:
-	rm -rf verif/obj_dir waveform.vcd *.log *.jou *.pb xsim.dir work.test_top.wdb
+	rm -rf verif/obj_dir waveform.vcd *.log *.jou *.pb xsim.dir work.test_top.wdb synthesized_netlist.v

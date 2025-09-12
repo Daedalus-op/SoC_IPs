@@ -1,5 +1,3 @@
-kian_core/engineering/bench/obj_dir
-kian_core/riscof_work
 UART/verif/obj_dir
 UART/waveform.vcd
 UART/xsim.dir
@@ -8,3 +6,14 @@ UART/*.log
 UART/*.jou
 UART/*.pb
 UART/synthesized_netlist.v
+UART/uvm/sim/xsim.dir
+UART/uvm/sim/cov_report/codeCoverageReport
+UART/uvm/sim/dump.vcd
+UART/uvm/sim/tbench_top_sim.wdb
+UART/uvm/sim/tr_db.log
+UART/uvm/sim/xelab.log
+UART/uvm/sim/xelab.pb
+UART/uvm/sim/xsim.jou
+UART/uvm/sim/xsim.log
+UART/uvm/sim/xvlog.log
+UART/uvm/sim/xvlog.pb

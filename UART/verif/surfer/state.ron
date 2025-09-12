@@ -1,0 +1,421 @@
+(
+    show_hierarchy: Some(false),
+    show_menu: Some(false),
+    show_ticks: None,
+    show_toolbar: None,
+    show_tooltip: None,
+    show_overview: None,
+    show_statusbar: None,
+    align_names_right: None,
+    show_variable_indices: None,
+    show_variable_direction: None,
+    show_empty_scopes: None,
+    show_parameters_in_scopes: None,
+    waves: Some((
+        source: File("waveform.vcd"),
+        format: Vcd,
+        active_scope: Some(WaveScope((
+            strs: [
+                "test_top",
+                "dut",
+            ],
+        ))),
+        displayed_items_order: [
+            (2),
+            (12),
+            (15),
+            (6),
+            (3),
+            (7),
+            (5),
+            (8),
+            (1),
+            (11),
+            (9),
+            (10),
+            (4),
+            (16),
+            (13),
+            (14),
+            (20),
+            (17),
+            (22),
+            (18),
+            (21),
+        ],
+        displayed_items: {
+            (12): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "probe_tick",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "probe_tick",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (13): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "rx",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "rx",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (6): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PRESETn",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PRESETn",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (21): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                            "dut",
+                        ],
+                    ),
+                    name: "tx_data_reg",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "tx_data_reg [31:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (16): Divider((
+                color: Some("Blue"),
+                background_color: Some("Blue"),
+                name: Some("--------------------"),
+            )),
+            (3): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PENABLE",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PENABLE",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (15): Divider((
+                color: Some("Blue"),
+                background_color: Some("Blue"),
+                name: Some("--------------------"),
+            )),
+            (11): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PWRITE",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PWRITE",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (7): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PSELx",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PSELx",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (18): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                            "dut",
+                        ],
+                    ),
+                    name: "tx_done_tick",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "tx_done_tick",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (10): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PWDATA",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PWDATA [31:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (17): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                            "dut",
+                        ],
+                    ),
+                    name: "rx_done_tick",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "rx_done_tick",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (20): Divider((
+                color: Some("Blue"),
+                background_color: Some("Blue"),
+                name: Some("--------------------"),
+            )),
+            (9): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PSTRB",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PSTRB [3:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (5): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PREADY",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PREADY",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (14): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "tx",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "tx",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (8): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PSLVERR",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PSLVERR",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (1): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PADDR",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PADDR [31:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (4): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PRDATA",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PRDATA [31:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (22): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                            "dut",
+                        ],
+                    ),
+                    name: "rx_data_reg",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "rx_data_reg [31:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+            (2): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "test_top",
+                        ],
+                    ),
+                    name: "PCLK",
+                ),
+                color: None,
+                background_color: None,
+                display_name: "PCLK",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+            )),
+        },
+        display_item_ref_counter: 22,
+        viewports: [
+            (
+                curr_left: (0.000371612700106147),
+                curr_right: (0.989105088930987),
+                target_left: (0.0),
+                target_right: (1.0),
+                move_start_left: (0.0),
+                move_start_right: (1.0),
+                move_duration: None,
+                move_strategy: Instant,
+            ),
+        ],
+        cursor: Some((1, [
+            213,
+        ])),
+        markers: {},
+        focused_item: Some((2)),
+        focused_transaction: (None, None),
+        selected_items: [],
+        default_variable_name_type: Unique,
+        scroll_offset: 0.0,
+        display_variable_indices: true,
+        graphics: {},
+    )),
+    drag_started: false,
+    drag_source_idx: None,
+    drag_target_idx: Some((8)),
+    previous_waves: None,
+    count: None,
+    blacklisted_translators: [],
+    show_about: false,
+    show_keys: false,
+    show_gestures: false,
+    show_quick_start: false,
+    show_license: false,
+    show_performance: false,
+    show_logs: false,
+    show_cursor_window: false,
+    wanted_timeunit: NanoSeconds,
+    time_string_format: None,
+    show_url_entry: false,
+    variable_name_filter_focused: false,
+    variable_name_filter_type: Fuzzy,
+    variable_name_filter_case_insensitive: true,
+    rename_target: None,
+    sidepanel_width: Some(300.0),
+    ui_zoom_factor: None,
+)
