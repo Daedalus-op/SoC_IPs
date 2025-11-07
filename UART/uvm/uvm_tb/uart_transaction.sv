@@ -39,63 +39,15 @@ class uart_transaction extends uvm_sequence_item;
   
 	function bit [6:0] calc_parity 	(
 										logic [31:0] payload,			
-										logic [3:0] frame_len, 
 										logic bad_parity,
 										logic ev_odd,
 										logic [6:0] bad_parity_frame
 									);
 		payld_func={{4{1'b0}},payload[31:0]}; 
-		case(frame_len)
-			5:	
-			begin
-				for(int i=0;i<7;i++) begin
-					calc_parity[i] = ev_odd?(^( payld_func[i*(5) +: 5] )) : (~^( payld_func[i*(5) +: 5] ));
-					if(bad_parity && bad_parity_frame[i])
-						calc_parity[i] = ~calc_parity[i];
-				end
-			end
-			
-			6:	
-			begin
-				for(int i=0;i<6;i++) begin
-					calc_parity[i] = ev_odd?(^( payld_func[i*(6) +: 6] )) : (~^( payld_func[i*(6) +: 6] ));		
-					if(bad_parity && bad_parity_frame[i])
-						calc_parity[i] = ~calc_parity[i];
-				end
-			end	
-			
-			7:	
-			begin
-				for(int i=0;i<5;i++) begin
-					calc_parity[i] = ev_odd?(^( payld_func[i*(7) +: 7] )) : (~^( payld_func[i*(7) +: 7] ));		
-					if(bad_parity && bad_parity_frame[i])
-						calc_parity[i] = ~calc_parity[i];
-				end
-			end
-			
-			8:
-			begin
-			  for(int i=0;i<4;i++)  begin
-					calc_parity[i] = ev_odd?(^( payld_func[i*(8) +: 8] )) : (~^( payld_func[i*(8) +: 8] ));		
-					if(bad_parity && bad_parity_frame[i])
-						calc_parity[i] = ~calc_parity[i];
-				end
-			end
-			
-			9:   // frame_length could be used of 9-bit long iff for no parity bit.
-			begin
-			  for(int i=0;i<4;i++) begin
-					calc_parity[i] = ev_odd?(^( payld_func[i*(9) +: 9] )) : (~^( payld_func[i*(9) +: 9] ));		
-					if(bad_parity && bad_parity_frame[i])
-						calc_parity[i] = ~calc_parity[i];
-				end
-			end
-			
-			default: 	`uvm_error(get_type_name(),$sformatf("------ :: Incorrect frame length selected :: ------"))
-		endcase
+		for(int i=0;i<4;i++)  begin
+			calc_parity[i] = ev_odd?(^( payld_func[i*(8) +: 8] )) : (~^( payld_func[i*(8) +: 8] ));		
+			if(bad_parity && bad_parity_frame[i])
+				calc_parity[i] = ~calc_parity[i];
+		end
 	endfunction
-
 endclass
-
-
-
